@@ -27,6 +27,11 @@ export default new Vuex.Store({
     }
   },
   actions: {
+    setLogoutTimer(context, expiresIn) {
+      setTimeout(function() {
+        context.dispatch('logout');
+      }, expiresIn * 1000);
+    },
     signup (context, authData) {
       axios.post(`/accounts:signUp?key=${apiKey}`,
       {
@@ -39,7 +44,14 @@ export default new Vuex.Store({
           idToken: data.idToken,
           userId: data.localId
         });
+        const now = new Date();
+        const expirationDate = new Date(now.getTime() + data.expiresIn * 1000);
+        localStorage.setItem('token', data.idToken);
+        localStorage.setItem('userId', data.localId);
+        localStorage.setItem('expiresIn', expirationDate);
+        
         context.dispatch('storeUser', authData);
+        context.dispatch('setLogoutTimer', data.expiresIn);
         router.replace('/dashboard');
       })
       .catch(err => console.log(err));
@@ -52,15 +64,43 @@ export default new Vuex.Store({
       })
       .then(res => {
         const data = res.data;
+
+        const now = new Date();
+        const expirationDate = new Date(now.getTime() + data.expiresIn * 1000);
+        localStorage.setItem('token', data.idToken);
+        localStorage.setItem('userId', data.localId);
+        localStorage.setItem('expiresIn', expirationDate);
+
         context.commit('authUser', {
           idToken: data.idToken,
           userId: data.localId
         });
+        context.dispatch('setLogoutTimer', data.expiresIn);
         router.replace('/dashboard');
       }).catch(err => console.log(err));
     },
+    tryAutoLogin(context) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return;
+      }
+
+      const expirationDate = localStorage.getItem('expiresIn');
+      const now = new Date();
+      if (now >= expirationDate) {
+        return;
+      }
+      const userId = localStorage.getItem('userId');
+      context.commit('authUser', {
+        idToken: token,
+        userId: userId
+      });
+    },
     logout (context) {
       context.commit('clearAuthData');
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('expiresIn');
       router.replace('/signin');
     },
     storeUser (context, userData) {
