@@ -110,7 +110,7 @@ export default new Vuex.Store({
       }).catch(err => console.log(err));
     },
     fetchUser (context) {
-      globalAxios.get('user.json?auth=' + context.state.idToken).then(res => {
+      globalAxios.get('/user.json?auth=' + context.state.idToken).then(res => {
         const data = res.data;
         const users = [];
         for(let key in data) {
